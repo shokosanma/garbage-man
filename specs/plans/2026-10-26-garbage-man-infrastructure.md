@@ -1281,7 +1281,10 @@ order: 1
 title: ① 看见 · 成本可见性
 description: 让每一分钱都有归属
 order: 2
+step: visibility
 ---
+
+<StepBadge />
 
 看不见的钱花不掉。这一步解决三个问题：
 
@@ -1292,15 +1295,31 @@ order: 2
 <!-- 待填：目录页先给问题清单，具体厂商文章后续补 -->
 ```
 
-其余三个同构，标题与 order 依次为：
+其余三个同构，标题 / order / step 依次为：
 
-| 文件 | title | order |
-|---|---|---|
-| `docs/cloud/identify/index.md` | ② 识别 · 找到垃圾 | 3 |
-| `docs/cloud/dispose/index.md` | ③ 处置 · 删降换 | 4 |
-| `docs/cloud/prevent/index.md` | ④ 防复发 · 机制 | 5 |
+| 文件 | title | order | step |
+|---|---|---|---|
+| `docs/cloud/identify/index.md` | ② 识别 · 找到垃圾 | 3 | `identify` |
+| `docs/cloud/dispose/index.md` | ③ 处置 · 删降换 | 4 | `dispose` |
+| `docs/cloud/prevent/index.md` | ④ 防复发 · 机制 | 5 | `prevent` |
 
 各目录的 `index.md` 正文暂列 2–3 条问题清单即可，标 `<!-- 待填 -->`。
+
+**为什么这四个页面要带 `step:` 和 `<StepBadge />`**：
+Task 9 的 README 会写「云文章的步骤徽章」这条约定 —— frontmatter 里写 `step:`，
+正文首行加 `<StepBadge />`，页面顶部出现对应步骤的荧光徽章。
+**这四个页面就是这条约定的第一批发起者** —— 如果骨架页自己都不带，
+组件就永远是死代码，约定也永远是空话。所以 `step:` 字段和 `<StepBadge />` 是这两个页面的
+**必填项**，不是可选项。`StepBadge` 组件的映射表只认这四个值：
+
+| frontmatter 的 `step` | 徽章文字 |
+|---|---|
+| `visibility` | ① 看见 |
+| `identify` | ② 识别 |
+| `dispose` | ③ 处置 |
+| `prevent` | ④ 防复发 |
+
+其它值一律渲染成空（`v-if` 不渲染）。**不要在这四个值之外另造。**
 
 - [ ] **Step 4: 写二手硬件篇骨架**
 
@@ -1353,6 +1372,12 @@ Expected: 退出码 0。
 
 Run: `node -e "const s=require('node:fs').readFileSync('dist/cloud/index.html','utf8'); for(const t of ['云账单篇','二手硬件','① 看见','② 识别','③ 处置','④ 防复发','淘货账本','硬件专题']) console.log(t, s.includes(t)?'OK':'MISSING')"`
 Expected: 八项全部 `OK`。
+
+Run: `node -e "const f=require('node:fs'); for(const p of ['visibility','identify','dispose','prevent']) { const s=f.readFileSync('dist/cloud/'+p+'/index.html','utf8'); console.log(p, s.includes('step-badge')?'OK':'MISSING') }"`
+Expected: 四项全部 `OK` —— **徽章必须真的渲染出来**，不是组件注册了就算数。
+
+另外确认侧边栏（`docs/hardware/ledger/thinkpad-x1-carbon-gen9.md` 这篇账本示例页）
+在本任务建了 `docs/hardware/index.md` 之后**自动出现在侧边栏里**了 —— 它此前一直不在。
 
 - [ ] **Step 6: 提交**
 
