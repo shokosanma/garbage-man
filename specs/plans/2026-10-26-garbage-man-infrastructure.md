@@ -778,8 +778,9 @@ git commit -m "feat: add warehouse-style dark theme with system fonts"
 > 的 Step 2 与 Step 2b）：
 > ① `.ledger-card__facts dd` 加 `overflow-wrap: anywhere` —— 修长 URL 撑破整页；
 > ② `.ledger-card__tag` 加 `flex-wrap: wrap`、`.ledger-card__verdict` 加 `overflow-wrap: anywhere`
-> —— 修长 verdict 撑破整页。
-> 两处都只加行，**不许重排 `style.css`**（里面的每条规则都有实测记录）。
+> —— 修长 verdict 撑破整页；
+> ③ `.ledger-card__price` 加 `overflow-wrap: anywhere` —— 修超长价格撑破整页。
+> 三处都只加行，**不许重排 `style.css`**（里面的每条规则都有实测记录）。
 
 - [ ] **Step 1: 写 `docs/.vitepress/theme/components/LedgerCard.vue`**
 
@@ -959,10 +960,24 @@ test('账本卡片渲染 frontmatter 字段', () => {
   assert.match(page, /95新/)
 })
 
+// 价签的修饰符是 Task 4 ↔ Task 5 ↔ Task 6 之间唯一的 class 契约。
+// 白名单断言比「查 is-none 不存在」更强：它同时挡得住拼错的 is-goodd，
+// 和将来有人误加的第四个修饰符。
+test('价签的修饰符不越出契约', () => {
+  const page = html('hardware', 'ledger', 'thinkpad-x1-carbon-gen9.html')
+  const modifiers = [...page.matchAll(/class="ledger-card__verdict([^"]*)"/g)]
+    .flatMap((m) => m[1].trim().split(/\s+/))
+    .filter(Boolean)
+  assert.ok(modifiers.length > 0, '产物里没找到价签的 class')
+  for (const name of modifiers) {
+    assert.ok(['is-good', 'is-meh', 'is-bad'].includes(name), `出现了契约外的修饰符：${name}`)
+  }
+})
+
 // 零字体契约唯一的自动化关卡：Task 8 的 CI 只跑这三个 npm script。
 // 原来这条只查 googleapis/gstatic，查不出 VitePress 自带的本地 Inter woff2 ——
-// 把主题入口退回 vitepress/theme 时，产物里会多出 14 个 woff2、1 条 @font-face、
-// 12 个字体 preload、产物从 340K 涨到 1.2M，而旧断言全绿。
+// 把主题入口退回 vitepress/theme 时，产物里会多出 14 个 woff2、1 条 @font-face，
+// 以及每个 HTML 页各 1 条字体 preload（产物体积随页数线性增长）。
 test('产物里没有任何字体', () => {
   const files = walk(DIST)
 
