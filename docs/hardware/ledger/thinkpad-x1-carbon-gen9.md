@@ -14,6 +14,8 @@ specs:
   screen: 14" 2.8K OLED
 ---
 
+# ThinkPad X1 Carbon Gen 9
+
 <LedgerCard />
 
 ## 到手实测
