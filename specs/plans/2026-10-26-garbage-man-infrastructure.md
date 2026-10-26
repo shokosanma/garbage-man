@@ -571,7 +571,8 @@ import { defineConfig } from 'vitepress'
 import path from 'node:path'
 import { buildSidebar } from './sidebar.ts'
 
-const CONTENT_ROOT = path.resolve(process.cwd(), 'docs')
+// 以配置文件自身位置推导内容根，与调用方的 cwd 无关。
+const CONTENT_ROOT = path.resolve(import.meta.dirname, '..')
 
 export default defineConfig({
   srcDir: '.',
@@ -591,7 +592,8 @@ export default defineConfig({
 })
 ```
 
-`process.cwd()` 在 npm script 中恒为仓库根。若将来从别的目录调用 vitepress，构造器会抛「内容目录不存在」——这是有意的显式失败。
+以配置文件自身位置推导内容根，与调用方的 cwd 无关：从任何目录调用 vitepress 都指向同一个 `docs/`。
+（实现时曾用 `process.cwd()`，在 npm script 里恒为仓库根，但从别的目录调用会指向错误的位置 —— 已改为 `import.meta.dirname`。）
 
 - [ ] **Step 6: 构建验证**
 
@@ -1129,7 +1131,12 @@ test('价签的修饰符不越出契约', () => {
   // 产物里根本看不见，只有源码能看见。
   const table = component.match(/VERDICT_CLASS[^=]*=\s*\{([^}]*)\}/s)
   assert.ok(table, '没找到价签的修饰符映射表，断言可能已经失效')
-  for (const [, name] of table[1].matchAll(/:\s*['"]([^'"]*)['"]/g)) {
+  // 先剥掉行注释，免得注释里写的旧写法被当成映射项。
+  const entries = table[1].replace(/\/\/[^\n]*/g, '')
+  // 三种引号都要认：值写成反引号时不能悄悄提取不到、然后循环一次都不执行。
+  const values = [...entries.matchAll(/:\s*(['"`])([^'"`]*)\1/g)].map((m) => m[2])
+  assert.ok(values.length > 0, '没从映射表里提取到任何修饰符值，断言可能已经失效')
+  for (const name of values) {
     assert.ok(['good', 'meh', 'bad'].includes(name), `映射表里出现了契约外的修饰符：is-${name}`)
   }
 })
