@@ -1195,12 +1195,23 @@ on:
     branches: [main]
   workflow_dispatch:
 
+> **权限说明（别改回去）**：`actions/deploy-pages` 的官方 README 写明
+> "The job that executes the deployment must at minimum have the following permissions:
+> `pages: write` to deploy to Pages, `id-token: write` to verify the deployment originates
+> from an appropriate source"。缺任何一个，deploy job 都会以
+> "Resource not accessible by integration" 失败。
+> `contents: read` 只够 checkout —— 我们不需要 `contents: write`（工作流不往仓库里提交东西）。
+> `cancel-in-progress: false` 与 GitHub 官方 starter 工作流一致：让正在进行的部署跑完，
+> 新的 push 排队而不是把它掐掉。
+
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -1226,6 +1237,9 @@ jobs:
 
       - name: Build output tests
         run: npm run test:build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
