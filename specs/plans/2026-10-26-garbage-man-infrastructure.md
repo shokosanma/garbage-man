@@ -972,11 +972,22 @@ test('账本卡片渲染 frontmatter 字段', () => {
 // 和将来有人误加的第四个修饰符。
 const MODIFIERS = ['is-good', 'is-meh', 'is-bad']
 
+const COMPONENT = path.resolve(
+  import.meta.dirname,
+  '..',
+  'docs',
+  '.vitepress',
+  'theme',
+  'components',
+  'LedgerCard.vue',
+)
+
 function verdictModifiers(page) {
-  // SSR 编译出的 class 顺序是「修饰符在前、基础类在后」（客户端 vnode 顺序相反，
-  // Vue 的 hydration 按 class 集合比较，所以两者不会报 mismatch）。
-  // 模板里把 class 和 :class 怎么写都一样，所以只能按「包含 ledger-card__verdict
-  // 的 class 属性」整体取，不能假定基础类在最前。
+  // SSR 编译出的 class 顺序**不是稳定契约**：@vue/compiler-ssr 有两条路径，
+  // 一条把动态 class 拼在前面、一条把静态 class 拼在前面；客户端 @vue/compiler-dom
+  // 又是一种顺序；dev 模式干脆不发 SSR 内容，纯客户端渲染。
+  // Vue 的 hydration 按 class **集合**比较，所以顺序不同不会报 mismatch。
+  // 因此只能按「包含 ledger-card__verdict 的 class 属性」整体取，不能假定基础类在最前。
   return [...page.matchAll(/class="([^"]*ledger-card__verdict[^"]*)"/g)]
     .flatMap((m) => m[1].trim().split(/\s+/))
     .filter((name) => name !== 'ledger-card__verdict')
@@ -994,16 +1005,27 @@ test('价签的修饰符不越出契约', () => {
     assert.ok(MODIFIERS.includes(name), `${file} 里出现了契约外的修饰符：${name}`)
   }
 
-  // 产物里没有未知 verdict 的卡片，渲染结果看不出兜底分支。
-  // 兜底值只留在组件源码里（编译后是压缩过的 ?? 片段，不可靠），
-  // 所以在这里守住它必须是空串，免得有人把 ?? '' 改回 ?? 'none' 之后没人发现。
-  const component = fs.readFileSync(
-    path.resolve(import.meta.dirname, '..', 'docs', '.vitepress', 'theme', 'components', 'LedgerCard.vue'),
-    'utf8',
+  // 产物里没有未知 verdict 的卡片时，渲染结果看不出兜底分支，
+  // 也看不出暂时没人用的映射项。所以兜底值和映射表都得从组件源码里守。
+  assert.ok(fs.existsSync(COMPONENT), '找不到价签组件源码，断言可能已经失效')
+  const component = fs.readFileSync(COMPONENT, 'utf8')
+
+  // 兜底值必须是空串：编译产物里只有压缩过的 ?? 片段，靠不住。
+  // 正则锚在声明行上（^ + [^
+]*），免得注释里出现同款写法就误报。
+  const fallback = component.match(
+    /^\s*const\s+verdictClass\b[^\n]*VERDICT_CLASS\[fm\.verdict\]\s*\?\?\s*(['"])(.*?)\1/m,
   )
-  const fallback = component.match(/VERDICT_CLASS\[fm\.verdict\]\s*\?\?\s*(['"])(.*?)\1/)
   assert.ok(fallback, '没找到价签的兜底逻辑，断言可能已经失效')
   assert.ok(fallback[2] === '', `出现了契约外的修饰符：is-${fallback[2]}`)
+
+  // 映射表的值也必须在契约内：加了第四个修饰符但暂时还没有页面用到时，
+  // 产物里根本看不见，只有源码能看见。
+  const table = component.match(/VERDICT_CLASS[^=]*=\s*\{([^}]*)\}/s)
+  assert.ok(table, '没找到价签的修饰符映射表，断言可能已经失效')
+  for (const [, name] of table[1].matchAll(/:\s*['"]([^'"]*)['"]/g)) {
+    assert.ok(['good', 'meh', 'bad'].includes(name), `映射表里出现了契约外的修饰符：is-${name}`)
+  }
 })
 
 // 零字体契约唯一的自动化关卡：Task 8 的 CI 只跑这三个 npm script。
