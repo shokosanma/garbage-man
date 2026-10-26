@@ -189,7 +189,7 @@ VitePress 的 config 打包器**不内联 node_modules 依赖**，被 config 引
 ## 7. 构建与发布
 
 - 本地：`npm run dev` 预览，`npm run build` 构建，`npm run preview` 预览产物。
-- CI：推送 `main` → GitHub Actions → `npm ci && npm run build` → 部署 `src/.vitepress/dist` 到 `gh-pages` 分支。
+- CI：推送 `main` → GitHub Actions → `npm ci && npm run build` → 部署仓库根 `dist/` 到 `gh-pages` 分支。
 - 仓库设置：Pages → Source = **GitHub Actions**；Actions workflow 需要 `contents: write` 权限。
 
 ### 环境问题（需在实施时解决）
