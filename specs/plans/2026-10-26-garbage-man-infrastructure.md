@@ -805,7 +805,7 @@ const specEntries = computed<[string, string][]>(() =>
 改 `docs/.vitepress/theme/index.ts`：
 
 ```ts
-import DefaultTheme from 'vitepress/theme'
+import DefaultTheme from 'vitepress/theme-without-fonts'
 import type { Theme } from 'vitepress'
 import LedgerCard from './components/LedgerCard.vue'
 import './style.css'
@@ -998,6 +998,7 @@ title: 四步法总纲
 description: 云账单降本的通用框架
 date: 2026-10-26
 tags: [方法论]
+order: 1
 ---
 
 # 四步法总纲
