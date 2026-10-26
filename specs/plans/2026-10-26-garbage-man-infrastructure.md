@@ -781,6 +781,13 @@ git commit -m "feat: add warehouse-style dark theme with system fonts"
 > —— 修长 verdict 撑破整页；
 > ③ `.ledger-card__price` 加 `overflow-wrap: anywhere` —— 修超长价格撑破整页。
 > 三处都只加行，**不许重排 `style.css`**（里面的每条规则都有实测记录）。
+>
+> **另有一个执行期才发现的环境事实**（fix round 2 实测，定位到 Vue 编译器）：
+> **SSR 的 class 顺序与客户端相反** —— `@vue/compiler-ssr` 把动态 class 拼在前面
+> （产物 `<span class="is-good ledger-card__verdict">`），`@vue/compiler-dom` 把基础 class 拼在前面
+> （客户端 `<span class="ledger-card__verdict is-good">`）。
+> Vue 的 hydration 按 class **集合**比较，所以两者不会报 mismatch。
+> **写断言时不能假定基础类在最前**，模板里怎么写 `class` / `:class` 都改变不了这个顺序。
 
 - [ ] **Step 1: 写 `docs/.vitepress/theme/components/LedgerCard.vue`**
 
@@ -963,15 +970,40 @@ test('账本卡片渲染 frontmatter 字段', () => {
 // 价签的修饰符是 Task 4 ↔ Task 5 ↔ Task 6 之间唯一的 class 契约。
 // 白名单断言比「查 is-none 不存在」更强：它同时挡得住拼错的 is-goodd，
 // 和将来有人误加的第四个修饰符。
-test('价签的修饰符不越出契约', () => {
-  const page = html('hardware', 'ledger', 'thinkpad-x1-carbon-gen9.html')
-  const modifiers = [...page.matchAll(/class="ledger-card__verdict([^"]*)"/g)]
+const MODIFIERS = ['is-good', 'is-meh', 'is-bad']
+
+function verdictModifiers(page) {
+  // SSR 编译出的 class 顺序是「修饰符在前、基础类在后」（客户端 vnode 顺序相反，
+  // Vue 的 hydration 按 class 集合比较，所以两者不会报 mismatch）。
+  // 模板里把 class 和 :class 怎么写都一样，所以只能按「包含 ledger-card__verdict
+  // 的 class 属性」整体取，不能假定基础类在最前。
+  return [...page.matchAll(/class="([^"]*ledger-card__verdict[^"]*)"/g)]
     .flatMap((m) => m[1].trim().split(/\s+/))
-    .filter(Boolean)
-  assert.ok(modifiers.length > 0, '产物里没找到价签的 class')
-  for (const name of modifiers) {
-    assert.ok(['is-good', 'is-meh', 'is-bad'].includes(name), `出现了契约外的修饰符：${name}`)
+    .filter((name) => name !== 'ledger-card__verdict')
+}
+
+test('价签的修饰符不越出契约', () => {
+  // 扫全部页面而不是只扫一张：Task 6 还会往账本里加页面，
+  // 任何一张卡片的修饰符越界都要抓得到。
+  const pages = walk(DIST).filter((f) => f.endsWith('.html'))
+  const rendered = pages.flatMap((file) =>
+    verdictModifiers(fs.readFileSync(file, 'utf8')).map((name) => [file, name]),
+  )
+  assert.ok(rendered.length > 0, '产物里没找到价签的 class')
+  for (const [file, name] of rendered) {
+    assert.ok(MODIFIERS.includes(name), `${file} 里出现了契约外的修饰符：${name}`)
   }
+
+  // 产物里没有未知 verdict 的卡片，渲染结果看不出兜底分支。
+  // 兜底值只留在组件源码里（编译后是压缩过的 ?? 片段，不可靠），
+  // 所以在这里守住它必须是空串，免得有人把 ?? '' 改回 ?? 'none' 之后没人发现。
+  const component = fs.readFileSync(
+    path.resolve(import.meta.dirname, '..', 'docs', '.vitepress', 'theme', 'components', 'LedgerCard.vue'),
+    'utf8',
+  )
+  const fallback = component.match(/VERDICT_CLASS\[fm\.verdict\]\s*\?\?\s*(['"])(.*?)\1/)
+  assert.ok(fallback, '没找到价签的兜底逻辑，断言可能已经失效')
+  assert.ok(fallback[2] === '', `出现了契约外的修饰符：is-${fallback[2]}`)
 })
 
 // 零字体契约唯一的自动化关卡：Task 8 的 CI 只跑这三个 npm script。
@@ -1000,7 +1032,8 @@ test('产物里没有任何字体', () => {
 - [ ] **Step 5: 构建并运行集成测试**
 
 Run: `npm run build && npm run test:build`
-Expected: `pass 4 / fail 0`。
+Expected: `pass 5 / fail 0`（首页已生成 / 资源链接带 base 前缀 / 账本卡片渲染 frontmatter 字段 /
+价签的修饰符不越出契约 / 产物里没有任何字体）。
 
 若 `¥3200` 断言失败但页面存在：检查 `docs/hardware/ledger/thinkpad-x1-carbon-gen9.md` 的 frontmatter 是否被解析 —— `price: 3200` 必须是数字，`verdict: 值` 若是带空格的字符串需加引号。
 
