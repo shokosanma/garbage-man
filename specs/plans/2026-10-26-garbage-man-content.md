@@ -26,6 +26,15 @@
 - frontmatter 里的日期**一律加引号**（`date: "2026-10-26"`）—— YAML 会把不带引号的
   `2026-10-26` 隐式解析成 **Date 对象**，渲染时会变成 `Sun Mar 15 2026 00:00:00 GMT+0000`。
 - 每完成一篇跑一次 `npm run build && npm run test:build`，链接测试保持绿。
+- **每个内容页面正文必须有一个可见的 H1。** VitePress 1.6.4 的默认主题**不会**把 frontmatter 的
+  `title` 渲染成 H1 —— frontmatter 的 title 只用于浏览器标题、侧边栏文字和文档大纲。
+  不写 `# 标题`，页面上一个标题都看不见（实测产物里 `<h1>` 计数为 0）。
+  三种页面的写法：
+  - 普通页 / 目录页：正文**第一行**就是 `# <frontmatter 的 title>`
+  - 带 `<StepBadge />` 的页：徽章在标题**上方**（徽章是行内元素，当 eyebrow 用）——
+    `<StepBadge />` → 空行 → `# <title>`
+  - 带 `<LedgerCard />` 的页：卡片是块级元素，放在标题**下方**——
+    `# <title>` → 空行 → `<LedgerCard />`
 
 ---
 
@@ -332,7 +341,12 @@ frontmatter 对应 `cloud: 腾讯云` / `cloud: 华为云`，`step: visibility`�
 title: ① 看见 · 成本可见性
 description: 让每一分钱都有归属
 order: 2
+step: visibility
 ---
+
+<StepBadge />
+
+# ① 看见 · 成本可见性
 
 看不见的钱花不掉。这一步解决三个问题：
 
@@ -534,7 +548,12 @@ tags: [闲置资源, 监控, 降本]
 title: ② 识别 · 找到垃圾
 description: 空跑实例、孤儿资源、存储堆积、流量隐形成本
 order: 3
+step: identify
 ---
+
+<StepBadge />
+
+# ② 识别 · 找到垃圾
 
 账单里最贵的通常不是「用得多」，而是「本不该存在」。这一章把常见的浪费形态逐个拆开。
 
@@ -672,7 +691,12 @@ git commit -m "docs: add waste identification articles"
 title: ③ 处置 · 删降换
 description: 对垃圾只有三种动作：删、降、换
 order: 4
+step: dispose
 ---
+
+<StepBadge />
+
+# ③ 处置 · 删降换
 
 确认是垃圾之后，动作只有三种。选错动作比不动更贵。
 
@@ -795,7 +819,12 @@ git commit -m "docs: add disposal articles covering delete downgrade and switch"
 title: ④ 防复发 · 机制
 description: 让垃圾不再堆积的四个抓手
 order: 5
+step: prevent
 ---
+
+<StepBadge />
+
+# ④ 防复发 · 机制
 
 降本是持续运动。这一章决定前三步的效果能维持多久。
 
@@ -938,6 +967,8 @@ description: 捡漏方法与避坑指南
 order: 2
 ---
 
+# 硬件专题
+
 方法与判断标准在这里，具体机器记在 [淘货账本](/hardware/ledger/)。
 
 - [二手机器从哪来](/hardware/guide/where-to-hunt)
@@ -990,6 +1021,8 @@ specs:
   screen: 待填
 ---
 
+# ThinkPad T14 Gen 2
+
 <LedgerCard />
 
 ## 到手实测
@@ -1019,6 +1052,8 @@ title: 淘货账本
 description: 每台捡回来的机器一页
 order: 1
 ---
+
+# 淘货账本
 
 一台机器一页，记四件事：**多少钱、从哪来、到手什么样、值不值**。
 
@@ -1098,6 +1133,8 @@ description: 用四步法把云上被浪费的钱捡回来
 order: 1
 ---
 
+# 云账单篇
+
 云上闲置资源是「垃圾」。这篇用 **看见 → 识别 → 处置 → 防复发** 四步法，
 把账单里的水分一点点挤出来。
 
@@ -1138,6 +1175,8 @@ sidebar_label: 二手硬件
 description: 从废品堆里捡回来的机器，和它们的真实价格
 order: 2
 ---
+
+# 二手硬件篇
 
 实体废品堆也是「垃圾」。这一篇记两类东西：
 

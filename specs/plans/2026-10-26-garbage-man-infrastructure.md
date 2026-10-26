@@ -25,6 +25,15 @@
 - 每个目录的 `index.md` 是该分组的清单文件，缺它则整个目录不进侧边栏。
 - VitePress 默认对 **Markdown 正文里的链接** 做死链检查并让构建失败（`ignoreDeadLinks` 默认 false）。这是刻意保留的：新增链接必须同时创建目标页，否则 `npm run build` 会直接报错。
 - 前端代码注释仅在解释「为什么」时写，不写逐行解释。
+- **每个内容页面正文必须有一个可见的 H1。** VitePress 1.6.4 的默认主题**不会**把 frontmatter 的
+  `title` 渲染成 H1 —— frontmatter 的 title 只用于浏览器标题、侧边栏文字和文档大纲。
+  不写 `# 标题`，页面上一个标题都看不见（实测产物里 `<h1>` 计数为 0）。
+  三种页面的写法：
+  - 普通页 / 目录页：正文**第一行**就是 `# <frontmatter 的 title>`
+  - 带 `<StepBadge />` 的页：徽章在标题**上方**（徽章是行内元素，当 eyebrow 用）——
+    `<StepBadge />` → 空行 → `# <title>`
+  - 带 `<LedgerCard />` 的页：卡片是块级元素，放在标题**下方**——
+    `# <title>` → 空行 → `<LedgerCard />`
 
 ---
 
@@ -1020,6 +1029,8 @@ specs:
   screen: 14" 2.8K OLED
 ---
 
+# ThinkPad X1 Carbon Gen 9
+
 <LedgerCard />
 
 ## 到手实测
@@ -1247,6 +1258,8 @@ description: 用四步法把云上被浪费的钱捡回来
 order: 1
 ---
 
+# 云账单篇
+
 云上闲置资源是「垃圾」。这篇用 **看见 → 识别 → 处置 → 防复发** 四步法，
 把账单里的水分一点点挤出来。
 
@@ -1286,6 +1299,8 @@ step: visibility
 
 <StepBadge />
 
+# ① 看见 · 成本可见性
+
 看不见的钱花不掉。这一步解决三个问题：
 
 - 账单能不能拆到团队 / 项目 / 人
@@ -1304,6 +1319,12 @@ step: visibility
 | `docs/cloud/prevent/index.md` | ④ 防复发 · 机制 | 5 | `prevent` |
 
 各目录的 `index.md` 正文暂列 2–3 条问题清单即可，标 `<!-- 待填 -->`。
+
+**每个目录页的正文首行必须是 `# <title>`** —— VitePress 1.6.4 的默认主题**不会**把 frontmatter 的
+`title` 渲染成 H1（frontmatter 的 title 只用于浏览器标题、侧边栏文字和文档大纲），
+不写 H1，页面上一个标题都看不见。上面的 `visibility` 页已经带了，
+**另外三个目录页（identify / dispose / prevent）同样要带**，
+写法和 `visibility` 完全同构：`<StepBadge />` → 空行 → `# <title>` → 空行 → 问题清单。
 
 **为什么这四个页面要带 `step:` 和 `<StepBadge />`**：
 Task 9 的 README 会写「云文章的步骤徽章」这条约定 —— frontmatter 里写 `step:`，
@@ -1333,6 +1354,8 @@ description: 从废品堆里捡回来的机器，和它们的真实价格
 order: 2
 ---
 
+# 二手硬件篇
+
 实体废品堆也是「垃圾」。这一篇记两类东西：
 
 - [淘货账本](/hardware/ledger/) —— 一台机器一篇：入手价、成色、实测、值不值
@@ -1348,6 +1371,8 @@ description: 每台捡回来的机器一页
 order: 1
 ---
 
+# 淘货账本
+
 一台机器一页，记四件事：**多少钱、从哪来、到手什么样、值不值**。
 
 <!-- 待填：账本说明与挑选标准 -->
@@ -1361,6 +1386,8 @@ title: 硬件专题
 description: 捡漏方法与避坑指南
 order: 2
 ---
+
+# 硬件专题
 
 <!-- 待填：专题目录 -->
 ```
@@ -1658,6 +1685,8 @@ specs:
   cpu: i7-1185G7
   ram: 16G
 ---
+
+# ThinkPad X1 Carbon Gen 9
 
 <LedgerCard />
 
