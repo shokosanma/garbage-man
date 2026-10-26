@@ -119,6 +119,7 @@
   margin: 0;
   font-size: 0.9rem;
   color: var(--vp-c-text-1);
+  overflow-wrap: anywhere;
 }
 
 /* 价签卡在正文里，VitePress 的 .vp-doc table 系列规则会漏进来
@@ -145,7 +146,9 @@
 /* 序列号 / URL 这类无空格长串必须能断行，否则单元格的 min-content 宽度
    会把整张表撑到卡片外面去。
    用 anywhere 而不是 break-word：只有 anywhere 会把「任意位置可断」计入
-   min-content 计算，break-word 不参与，挡不住表格撑破。 */
+   min-content 计算，break-word 不参与，挡不住表格撑破。
+   th 与 td 都要写：标签也可能是不带连字符的长串（如 batteryhealthcyclecount），
+   漏掉 th 标签列会被撑到 179px 并把值列挤窄，不要精简成只写在 table 上。 */
 .ledger-card .ledger-card__specs th,
 .ledger-card .ledger-card__specs td {
   padding: 0.35rem 0.6rem;
