@@ -518,10 +518,12 @@ git commit -m "feat: generate sidebar from content directory tree"
   --vp-c-bg-alt: #161b22;
   --vp-c-bg-soft: #1c2129;
   --vp-c-bg-elv: #21262d;
+  --vp-c-border: #30363d;
   --vp-c-divider: #30363d;
+  --vp-c-gutter: #0d1117;
   --vp-c-text-1: #e6edf3;
   --vp-c-text-2: #9aa4b2;
-  --vp-c-text-3: #6e7681;
+  --vp-c-text-3: #8b949e;
   --vp-c-brand-1: #00e27a;
   --vp-c-brand-2: #00b862;
   --vp-c-brand-3: #00a354;
@@ -530,20 +532,17 @@ git commit -m "feat: generate sidebar from content directory tree"
   --gm-warn: #ffc400;
   --gm-danger: #ff6b6b;
 
+  /* 品牌按钮底色是荧光绿系，白字压上去对比度不足，改用页面底色做文字 */
+  --vp-button-brand-text: #0d1117;
+  --vp-button-brand-hover-text: #0d1117;
+  --vp-button-brand-active-text: #0d1117;
+
   --vp-font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
   --vp-font-family-mono: ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Consolas,
     'Liberation Mono', monospace;
-}
 
-@media (min-width: 640px) {
-  :root {
-    --vp-layout-max-width: 1440px;
-  }
-}
-
-.dark {
-  --vp-c-bg: #0d1117;
+  --vp-layout-max-width: 1440px;
 }
 
 /* ---------- 价签卡片 ---------- */
@@ -557,24 +556,18 @@ git commit -m "feat: generate sidebar from content directory tree"
   background: linear-gradient(180deg, var(--vp-c-bg-soft), var(--vp-c-bg-alt));
 }
 
+/* 打孔柱要跟着卡片高度伸缩，所以不能写死孔的数量：
+   孔洞用径向渐变平铺，repeat:round 会把末孔完整地收在卡片底部，不会裁成半圆。 */
 .ledger-card::before {
   content: '';
   position: absolute;
   left: 14px;
   top: 20px;
+  bottom: 20px;
   width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--vp-c-bg);
-  box-shadow:
-    0 30px 0 var(--vp-c-bg),
-    0 60px 0 var(--vp-c-bg),
-    0 90px 0 var(--vp-c-bg),
-    0 120px 0 var(--vp-c-bg),
-    0 150px 0 var(--vp-c-bg),
-    0 180px 0 var(--vp-c-bg),
-    0 210px 0 var(--vp-c-bg),
-    0 240px 0 var(--vp-c-bg);
+  background-image: radial-gradient(circle at 5px 5px, var(--vp-c-bg) 5px, transparent 5px);
+  background-size: 10px 30px;
+  background-repeat: round;
 }
 
 .ledger-card__tag {
@@ -643,26 +636,49 @@ git commit -m "feat: generate sidebar from content directory tree"
   color: var(--vp-c-text-1);
 }
 
-.ledger-card__specs {
+/* 价签卡在正文里，VitePress 的 .vp-doc table 系列规则会漏进来
+   （块级窄表、斑马纹、四边框线、表头色块、14px 字号）。
+   这里统一加上 .ledger-card 前缀把特异性抬到 (0,2,x)，逐项复位。 */
+.ledger-card .ledger-card__specs {
+  display: table;
   width: 100%;
+  margin: 0;
+  overflow: visible;
   border-collapse: collapse;
   font-size: 0.88rem;
 }
 
-.ledger-card__specs th,
-.ledger-card__specs td {
-  padding: 0.35rem 0.6rem;
-  border-top: 1px solid var(--vp-c-divider);
-  text-align: left;
+.ledger-card .ledger-card__specs tr {
+  background-color: transparent;
+  border-top: none;
 }
 
-.ledger-card__specs th {
+.ledger-card .ledger-card__specs tr:nth-child(2n) {
+  background-color: transparent;
+}
+
+/* 序列号 / URL 这类无空格长串必须能断行，否则单元格的 min-content 宽度
+   会把整张表撑到卡片外面去。
+   用 anywhere 而不是 break-word：只有 anywhere 会把「任意位置可断」计入
+   min-content 计算，break-word 不参与，挡不住表格撑破。 */
+.ledger-card .ledger-card__specs th,
+.ledger-card .ledger-card__specs td {
+  padding: 0.35rem 0.6rem;
+  border: none;
+  border-top: 1px solid var(--vp-c-divider);
+  background-color: transparent;
+  font-size: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.ledger-card .ledger-card__specs th {
   width: 5.5rem;
   font-weight: 400;
   color: var(--vp-c-text-3);
 }
 
-.ledger-card__specs td {
+.ledger-card .ledger-card__specs td {
   font-family: var(--vp-font-family-mono);
   color: var(--vp-c-text-1);
 }
@@ -679,6 +695,19 @@ git commit -m "feat: generate sidebar from content directory tree"
   color: var(--vp-c-brand-1);
   font-size: 0.82rem;
   font-weight: 600;
+}
+
+/* ---------- 导航栏 ---------- */
+
+/* 导航栏底下的分隔线取的是 --vp-c-gutter，而我们把 gutter 调成了页面底色
+   （页脚那条线需要藏起来），结果连导航栏的分隔线一起没了。
+   在导航栏内部把 gutter 换回边框色；首页不需要这条线，所以排除 .home。
+   VitePress 的分隔线规则带 scope 属性选择器，实际特异性是 (0,4,0)；
+   之前额外写的 .VPNavBar:not(.home) .divider > div.divider-line 是 (0,4,1)
+   （div 是类型选择器，占 c 位），虽能压过它们，但与上面的 token 方案重复，
+   而且依赖 .divider > div.divider-line 的 DOM 形状，已删除。 */
+.VPNavBar:not(.home) {
+  --vp-c-gutter: var(--vp-c-border);
 }
 
 /* ---------- 首页 ---------- */
