@@ -9,6 +9,7 @@ export default defineConfig({
   srcDir: '.',
   outDir: '../dist',
   base: '/garbage-man/',
+  lang: 'zh-CN',
   appearance: 'force-dark',
   title: 'garbage-man',
   description: '从云账单和废品堆里，捡回被丢掉的钱',
