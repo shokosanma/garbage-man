@@ -768,10 +768,18 @@ git commit -m "feat: add warehouse-style dark theme with system fonts"
 - Create: `docs/hardware/ledger/thinkpad-x1-carbon-gen9.md`
 - Create: `tests/build.test.mjs`
 - Modify: `docs/.vitepress/theme/index.ts`
+- Modify: `docs/.vitepress/theme/style.css`（Task 4 复评遗留：`__facts` / `__verdict` 窄屏溢出）
 
 **Interfaces:**
 - Consumes: Task 3 的 `buildSidebar`（账本目录进侧边栏）、Task 4 的 `.ledger-card` 类名
 - Produces: 全局组件 `LedgerCard`；`tests/build.test.mjs` 对 `dist/` 产物做断言
+
+> **本任务在执行期被 Task 4 的复评回填了两处改动**（详见 `.superpowers/sdd/2026-10-26-garbage-man-infrastructure/task-5-brief.md`
+> 的 Step 2 与 Step 2b）：
+> ① `.ledger-card__facts dd` 加 `overflow-wrap: anywhere` —— 修长 URL 撑破整页；
+> ② `.ledger-card__tag` 加 `flex-wrap: wrap`、`.ledger-card__verdict` 加 `overflow-wrap: anywhere`
+> —— 修长 verdict 撑破整页。
+> 两处都只加行，**不许重排 `style.css`**（里面的每条规则都有实测记录）。
 
 - [ ] **Step 1: 写 `docs/.vitepress/theme/components/LedgerCard.vue`**
 
@@ -789,17 +797,22 @@ const VERDICT_CLASS: Record<string, string> = {
   不值: 'bad',
 }
 
-const verdictClass = computed(() => VERDICT_CLASS[fm.verdict] ?? 'none')
+// 未知 verdict 不产出修饰符 class，落到基础样式即可。
+// 契约里只有 is-good / is-meh / is-bad 三个修饰符，不要多出一个没人管的 is-none。
+const verdictClass = computed(() => VERDICT_CLASS[fm.verdict] ?? '')
 
 const specEntries = computed<[string, string][]>(() =>
   Object.entries((fm.specs ?? {}) as Record<string, string>),
 )
 
-// YAML 会把 `2026-03-15` 隐式解析成 Date 对象，直接插值会渲染成
-// "Sun Mar 15 2026 00:00:00 GMT+0000"。frontmatter 里加引号能避开，
-// 这里再兜一层，作者忘了加引号也不会渲染出乱码。
+// frontmatter 里的日期必须加引号（date: "2026-03-15"），这是唯一可靠的防线：
+// 不加引号时 YAML 会把日期解析成 Date 对象，而 VitePress 注入页面数据时做了
+// JSON.parse(JSON.stringify(data))，Date 到客户端前已经变成 ISO 串，
+// 直接插值会渲染成 "2026-03-15T00:00:00.000Z"。
+// 下面两层是兜底：Date 对象本身，以及被序列化过的 ISO 串。
 function asText(value: unknown): string {
   if (value instanceof Date) return value.toISOString().slice(0, 10)
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) return value.slice(0, 10)
   return value == null ? '' : String(value)
 }
 </script>
@@ -807,7 +820,7 @@ function asText(value: unknown): string {
 <template>
   <div class="ledger-card">
     <div class="ledger-card__tag">
-      <span class="ledger-card__verdict" :class="`is-${verdictClass}`">
+      <span class="ledger-card__verdict" :class="verdictClass ? `is-${verdictClass}` : undefined">
         {{ fm.verdict ?? '未评' }}
       </span>
       <span v-if="fm.price" class="ledger-card__price">¥{{ fm.price }}</span>
@@ -842,9 +855,14 @@ function asText(value: unknown): string {
 
 **注意（YAML 隐式类型陷阱）**：`date: 2026-03-15` 这类不带引号的日期，会被 gray-matter 的 YAML 引擎
 （js-yaml `safeLoad`，DEFAULT_SCHEMA）解析成 **Date 对象**，不是字符串。
-所以 frontmatter 里的日期一律**加引号**（`date: "2026-03-15"`），
-组件里对 `acquired` 再用 `asText()` 兜一层 —— 防止作者漏加引号时把
-`Sun Mar 15 2026 00:00:00 GMT+0000` 这种东西渲染到页面上。
+所以 frontmatter 里的日期一律**加引号**（`date: "2026-03-15"`）—— **这是唯一可靠的防线**。
+
+评审实测（build 与 dev 两条路都试过）：漏加引号时，VitePress 的 `injectPageDataCode()` 会做
+`JSON.parse(JSON.stringify(data))`，Date 到客户端前已经变成 ISO 串，
+页面实际渲染成 `2026-03-15T00:00:00.000Z`（**不是** `Sun Mar 15 2026 …` ——
+那个形态只在 gray-matter 层 `String(date)` 时出现，且用的是**本地时区**
+（东八区机器上是 `GMT+0800`，UTC 机器上才是 `GMT+0000`））。
+所以 `asText()` 要**两层**都认：Date 对象本身，以及被序列化过的 ISO 串。
 
 - [ ] **Step 2: 注册组件**
 
@@ -908,7 +926,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const DIST = path.resolve(process.cwd(), 'dist')
+const DIST = path.resolve(import.meta.dirname, '..', 'dist')
 
 function html(...segments) {
   return fs.readFileSync(path.join(DIST, ...segments), 'utf8')
@@ -916,6 +934,13 @@ function html(...segments) {
 
 function exists(...segments) {
   return fs.existsSync(path.join(DIST, ...segments))
+}
+
+function walk(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name)
+    return entry.isDirectory() ? walk(full) : [full]
+  })
 }
 
 test('首页已生成', () => {
@@ -928,18 +953,32 @@ test('资源链接带 base 前缀', () => {
 
 test('账本卡片渲染 frontmatter 字段', () => {
   const page = html('hardware', 'ledger', 'thinkpad-x1-carbon-gen9.html')
-  assert.match(page, /¥3200/)
+  assert.match(page, /¥3200(?![.\d])/)
   assert.match(page, /is-good/)
   assert.match(page, /i7-1185G7/)
   assert.match(page, /95新/)
 })
 
-test('没有引入外链字体', () => {
-  const cssDir = path.join(DIST, 'assets')
-  const cssFile = fs.readdirSync(cssDir).find((f) => f.startsWith('style.') && f.endsWith('.css'))
-  assert.ok(cssFile, '未找到编译后的样式文件')
-  const css = fs.readFileSync(path.join(cssDir, cssFile), 'utf8')
-  assert.doesNotMatch(css, /fonts\.googleapis|fonts\.gstatic/)
+// 零字体契约唯一的自动化关卡：Task 8 的 CI 只跑这三个 npm script。
+// 原来这条只查 googleapis/gstatic，查不出 VitePress 自带的本地 Inter woff2 ——
+// 把主题入口退回 vitepress/theme 时，产物里会多出 14 个 woff2、1 条 @font-face、
+// 12 个字体 preload、产物从 340K 涨到 1.2M，而旧断言全绿。
+test('产物里没有任何字体', () => {
+  const files = walk(DIST)
+
+  const fontFiles = files.filter((f) => /\.(woff2?|ttf|otf|eot)$/i.test(f))
+  assert.deepEqual(fontFiles, [], `产物里出现了字体文件：${fontFiles.join(', ')}`)
+
+  for (const file of files.filter((f) => f.endsWith('.css'))) {
+    const css = fs.readFileSync(file, 'utf8')
+    assert.doesNotMatch(css, /@font-face/, `${file} 里出现了 @font-face`)
+    assert.doesNotMatch(css, /fonts\.googleapis|fonts\.gstatic/i, `${file} 里出现了外链字体`)
+  }
+
+  for (const file of files.filter((f) => f.endsWith('.html'))) {
+    const page = fs.readFileSync(file, 'utf8')
+    assert.doesNotMatch(page, /rel="preload"[^>]*font/, `${file} 里出现了字体 preload`)
+  }
 })
 ```
 
