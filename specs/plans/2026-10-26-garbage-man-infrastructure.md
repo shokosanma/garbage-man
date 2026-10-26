@@ -1495,14 +1495,6 @@ git commit -m "feat: build home page with hero and feature cards"
 
 - [ ] **Step 1: 写工作流**
 
-```yaml
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
 > **权限说明（别改回去）**：`actions/deploy-pages` 的官方 README 写明
 > "The job that executes the deployment must at minimum have the following permissions:
 > `pages: write` to deploy to Pages, `id-token: write` to verify the deployment originates
@@ -1511,6 +1503,14 @@ on:
 > `contents: read` 只够 checkout —— 我们不需要 `contents: write`（工作流不往仓库里提交东西）。
 > `cancel-in-progress: false` 与 GitHub 官方 starter 工作流一致：让正在进行的部署跑完，
 > 新的 push 排队而不是把它掐掉。
+
+```yaml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -1570,6 +1570,13 @@ jobs:
 
 Run: `python3 -c "import yaml,sys; d=yaml.safe_load(open('.github/workflows/deploy.yml')); print('jobs:', list(d['jobs'].keys()))"`
 Expected: 输出 `jobs: ['build', 'deploy']`。
+
+> **PyYAML 的 `on:` 陷阱（别"修"它）**：用 `python3 -c "import yaml; ..."` 校验时，
+> PyYAML 6.x 走 YAML 1.1 规范，会把顶层键 `on:` 解析成布尔 **`True`**
+> （所以 `print(list(d.keys()))` 看到的是 `['name', True, 'permissions', 'concurrency', 'jobs']`）。
+> 这是 **PyYAML 的老毛病，不是工作流写错了** —— GitHub Actions 自己的解析器把 `on` 当普通字符串键，
+> 官方 starter 工作流就是这么写的。**不要**把它改成 `"on":` 或加引号。
+> 校验只看 `jobs` 键即可（Step 2 的命令正是如此）。
 
 - [ ] **Step 3: 确认产物目录与工作流一致**
 
