@@ -51,16 +51,20 @@
 
 ```
 garbage-man/
-├── .vitepress/
-│   ├── config.mts
-│   ├── sidebar.ts          # 侧边栏生成器，config 加载时直接调用
-│   └── theme/
-│       ├── index.ts
-│       ├── style.css
-│       └── components/
-│           ├── LedgerCard.vue
-│           └── StepBadge.vue
-├── src/
+├── docs/                      # 站点内容根（VitePress root = docs/）
+│   ├── .vitepress/
+│   │   ├── config.mts
+│   │   ├── sidebar.ts         # 侧边栏生成器，config 加载时直接调用
+│   │   └── theme/
+│   │       ├── index.ts
+│   │       ├── style.css
+│   │       └── components/
+│   │           ├── LedgerCard.vue
+│   │           └── StepBadge.vue
+│   ├── public/
+│   │   └── images/
+│   │       ├── cloud/
+│   │       └── hardware/
 │   ├── index.md
 │   ├── cloud/
 │   │   ├── index.md
@@ -73,19 +77,21 @@ garbage-man/
 │       ├── index.md
 │       ├── ledger/
 │       └── guide/
-├── public/
-│   └── images/
-│       ├── cloud/
-│       └── hardware/
-├── specs/
+├── specs/                     # 设计 / 实施文档（不参与构建）
+├── tests/                     # node:test 单元测试 + 构建产物集成测试
+├── dist/                      # 构建产物（gitignore）
 ├── .github/workflows/deploy.yml
 ├── package.json
+├── .npmrc
+├── .gitignore
 └── README.md
 ```
 
-VitePress 配置：`srcDir: 'src'`、`publicDir: 'public'`、`base: '/garbage-man/'`、`appearance: 'force-dark'`。
+VitePress 配置：`srcDir: '.'`（相对 `docs/`）、`outDir: '../dist'`（仓库根）、`base: '/garbage-man/'`、`appearance: 'force-dark'`。
 
-侧边栏由 `.vitepress/sidebar.ts` 在 config 加载时同步计算，**不产出也不提交任何生成文件**，因此不存在「改了内容忘了重新生成」的中间态。生成器与 config 同目录，避免跨目录相对导入在 esbuild 打包 config 时出问题。
+采用 VitePress 标准布局（root = `docs/`）而非自定义 `srcDir`，原因是 root 与 srcDir 相同时所有路径解析无歧义，`publicDir` 与 `outDir` 的相对基准唯一。
+
+侧边栏由 `docs/.vitepress/sidebar.ts` 在 config 加载时同步计算，**不产出也不提交任何生成文件**，因此不存在「改了内容忘了重新生成」的中间态。生成器与 config 同目录，避免跨目录相对导入在 esbuild 打包 config 时出问题。
 
 ### 排序机制
 
@@ -132,14 +138,17 @@ verdict: 值          # 值 | 勉强 | 不值
 - **账本页**：顶部为「价签卡片」（左侧打孔、虚线边框、荧光标签展示价格与 verdict），正文为到手实测、翻车点、结论。由 `<LedgerCard />` 组件读取 frontmatter 渲染，每篇仅需多写一行。
 - **文章页**：常规文档布局。
 
-### 4.3 布局机制决策
+### 4.3 布局机制决策（已实测定型）
 
-优先使用 VitePress 原生的 frontmatter `layout` 自定义布局机制。实施时先实测该机制是否可用：
+**采用默认 `doc` 布局 + 正文首行 `<LedgerCard />`。** 不引入 VitePress 自定义 layout 机制。
 
-- **可用** → 注册 `ledger` 布局，frontmatter 声明即可，无需正文插组件。
-- **不可用** → 退回 `layout: page` + 正文首行 `<LedgerCard />`，效果一致。
+理由：自定义 layout 依赖 VitePress 主题内部结构，行为不确定且收益有限（仅省掉正文一行组件调用）；默认 doc 布局反而提供合适的阅读栏宽、侧边栏与大纲。已实测确认 `<LedgerCard />` 通过 `useData()` 读取 frontmatter 正常渲染（`¥3200`、`is-good`、`i7-1185G7` 均正确出现在构建产物中）。
 
-两种路径产物外观相同，差别仅在每篇是否多一行组件调用。组件读取 `useData()` 的 frontmatter，无需额外传参。
+组件读取 `useData()` 的 frontmatter，无需额外传参。
+
+### 4.4 构建期依赖约束（已实测）
+
+VitePress 的 config 打包器**不内联 node_modules 依赖**，被 config 引用的包必须在 `package.json` 中真实安装。`gray-matter`（frontmatter 解析）因此列为 devDependency，缺失时构建直接报 `ERR_MODULE_NOT_FOUND`。
 
 ## 5. 站点与主题
 
@@ -186,8 +195,8 @@ verdict: 值          # 值 | 勉强 | 不值
 ### 环境问题（需在实施时解决）
 
 1. **npm 代理**：当前环境 `HTTP_PROXY` / `HTTPS_PROXY` 指向 `node-rpi:9081`，该主机已下线（`/etc/hosts` 中条目被注释，`192.168.0.104:9081` 不可达），npm 会长时间挂起。直连 registry.npmmirror.com 正常（0.5s）。
-   - 尝试在项目 `.npmrc` 写 `noproxy=*` 解决；
-   - 不生效则改用 `env -u HTTP_PROXY -u HTTPS_PROXY npm install`，并写入 README。
+   - **已实测确认**：项目 `.npmrc` 写入 `noproxy=*` 即可解决（`npm view` 从挂起变为 0.5s 返回）。
+   - 兜底：`env -u HTTP_PROXY -u HTTPS_PROXY npm install`，写入 README。
    - CI 环境无此代理变量，不受影响。
 2. **gh token 失效**：`gh auth status` 显示 `shokosanma` 账号 token 无效，推送前需 `gh auth refresh -h github.com`。
 
@@ -195,11 +204,11 @@ verdict: 值          # 值 | 勉强 | 不值
 
 | # | 步骤 | 验证点 |
 |---|---|---|
-| 1 | `git init`、脚手架、`.gitignore`、`package.json` | 依赖可安装 |
-| 2 | 打通 npm 代理问题 | **A**：VitePress 在 Node 24 下 `dev` + `build` 均通过 |
+| 1 | 脚手架、`.gitignore`、`.npmrc`、`package.json` | 依赖可安装 |
+| 2 | 打通 npm 代理问题 | **A**：VitePress 在 Node 24 下 `dev` + `build` 均通过（**已预验证**） |
 | 3 | `config.mts` + 主题 CSS | 站点可启动，深色主题生效 |
-| 4 | `.vitepress/sidebar.ts` + 集成进 config | **B**：侧边栏层级与 `order` 排序正确 |
-| 5 | `LedgerCard.vue` / `StepBadge.vue` | **C**：账本卡片正确渲染 frontmatter；实测自定义 layout 机制并定型 |
+| 4 | `docs/.vitepress/sidebar.ts` + 集成进 config | **B**：侧边栏层级与 `order` 排序正确 |
+| 5 | `LedgerCard.vue` / `StepBadge.vue` | **C**：账本卡片正确渲染 frontmatter（**已预验证**） |
 | 6 | 首页 | Hero、双主线入口、最近更新列表正常 |
 | 7 | 内容骨架与首批文章 | 目录结构符合第 3 节；厂商细节已核实 |
 | 8 | CI 工作流 + 部署 | 推 `main` 后站点可访问 |
@@ -210,7 +219,7 @@ verdict: 值          # 值 | 勉强 | 不值
 | 风险 | 影响 | 应对 |
 |---|---|---|
 | 侧边栏生成逻辑未实测 | 导航结构可能不符合预期 | 验证点 B 优先做；必要时退化为手写 JSON |
-| 自定义 layout 机制行为不确定 | 账本页渲染方式受影响 | 已在 4.3 规定双路径，产品外观一致 |
+| 构建期依赖漏装 | 构建报 `ERR_MODULE_NOT_FOUND` | 已在 4.4 记录约束；`gray-matter` 列入 devDependencies |
 | 厂商资料核实不实 | 文章误导读者 | 核实不到即留空标注，禁止凭记忆书写 |
 | npm 代理环境异常 | 本地无法安装依赖 | 验证点 A 优先解决，写入 README |
 | 仓库体积增长 | 图片占用空间 | 图片压缩后再提交；必要时后续引入 LFS |
