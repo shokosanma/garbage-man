@@ -142,6 +142,10 @@
   background-color: transparent;
 }
 
+/* 序列号 / URL 这类无空格长串必须能断行，否则单元格的 min-content 宽度
+   会把整张表撑到卡片外面去。
+   用 anywhere 而不是 break-word：只有 anywhere 会把「任意位置可断」计入
+   min-content 计算，break-word 不参与，挡不住表格撑破。 */
 .ledger-card .ledger-card__specs th,
 .ledger-card .ledger-card__specs td {
   padding: 0.35rem 0.6rem;
@@ -150,6 +154,7 @@
   background-color: transparent;
   font-size: inherit;
   text-align: left;
+  overflow-wrap: anywhere;
 }
 
 .ledger-card .ledger-card__specs th {
@@ -181,15 +186,13 @@
 
 /* 导航栏底下的分隔线取的是 --vp-c-gutter，而我们把 gutter 调成了页面底色
    （页脚那条线需要藏起来），结果连导航栏的分隔线一起没了。
-   在导航栏内部把 gutter 换回边框色；首页不需要这条线，所以排除 .home。 */
+   在导航栏内部把 gutter 换回边框色；首页不需要这条线，所以排除 .home。
+   VitePress 的分隔线规则带 scope 属性选择器，实际特异性是 (0,4,0)；
+   之前额外写的 .VPNavBar:not(.home) .divider > div.divider-line 是 (0,4,1)
+   （div 是类型选择器，占 c 位），虽能压过它们，但与上面的 token 方案重复，
+   而且依赖 .divider > div.divider-line 的 DOM 形状，已删除。 */
 .VPNavBar:not(.home) {
   --vp-c-gutter: var(--vp-c-border);
-}
-
-/* 兜底：VitePress 的分隔线规则带 scope 属性，特异性是 (0,4,0)，
-   这条 (0,5,0) 直接压过它，分隔线颜色不依赖 token 改写。 */
-.VPNavBar:not(.home) .divider > div.divider-line {
-  background-color: var(--vp-c-border);
 }
 
 /* ---------- 首页 ---------- */
