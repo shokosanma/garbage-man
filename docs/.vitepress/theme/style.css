@@ -96,6 +96,7 @@
   font-weight: 700;
   line-height: 1;
   color: var(--vp-c-brand-1);
+  overflow-wrap: anywhere;
 }
 
 .ledger-card__facts {
