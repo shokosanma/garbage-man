@@ -1712,6 +1712,15 @@ specs:
 在 frontmatter 里写 `step: visibility` / `identify` / `dispose` / `prevent`，
 正文首行加 `<StepBadge />`，页面顶部会出现对应步骤的荧光徽章。
 
+## frontmatter 里的日期要加引号
+
+`date: "2026-10-26"`、`acquired: "2026-03-15"` —— 必须带引号。
+不加引号时 YAML 会把它解析成 Date 对象，VitePress 注入页面数据时做了一次
+`JSON.parse(JSON.stringify())`，Date 到客户端前已经变成 ISO 串。
+账本页的「入手」现在靠 `LedgerCard` 里的 `asText()` 兜底，显示出来仍是 `2026-03-15`；
+但那只是组件级的兜底 —— 任何直接插值的地方都会渲染成 `2026-03-15T00:00:00.000Z`。
+加引号是唯一可靠的写法。
+
 ## 目录约定
 
 - 每个内容目录需要一个 `index.md`，它决定该分组在侧边栏的标题与排序，
