@@ -11,17 +11,22 @@ const VERDICT_CLASS: Record<string, string> = {
   不值: 'bad',
 }
 
-const verdictClass = computed(() => VERDICT_CLASS[fm.verdict] ?? 'none')
+// 未知 verdict 不产出修饰符 class，落到基础样式即可。
+// 契约里只有 is-good / is-meh / is-bad 三个修饰符，不要多出一个没人管的 is-none。
+const verdictClass = computed(() => VERDICT_CLASS[fm.verdict] ?? '')
 
 const specEntries = computed<[string, string][]>(() =>
   Object.entries((fm.specs ?? {}) as Record<string, string>),
 )
 
-// YAML 会把 `2026-03-15` 隐式解析成 Date 对象，直接插值会渲染成
-// "Sun Mar 15 2026 00:00:00 GMT+0000"。frontmatter 里加引号能避开，
-// 这里再兜一层，作者忘了加引号也不会渲染出乱码。
+// frontmatter 里的日期必须加引号（date: "2026-03-15"），这是唯一可靠的防线：
+// 不加引号时 YAML 会把日期解析成 Date 对象，而 VitePress 注入页面数据时做了
+// JSON.parse(JSON.stringify(data))，Date 到客户端前已经变成 ISO 串，
+// 直接插值会渲染成 "2026-03-15T00:00:00.000Z"。
+// 下面两层是兜底：Date 对象本身，以及被序列化过的 ISO 串。
 function asText(value: unknown): string {
   if (value instanceof Date) return value.toISOString().slice(0, 10)
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) return value.slice(0, 10)
   return value == null ? '' : String(value)
 }
 </script>
@@ -29,7 +34,7 @@ function asText(value: unknown): string {
 <template>
   <div class="ledger-card">
     <div class="ledger-card__tag">
-      <span class="ledger-card__verdict" :class="`is-${verdictClass}`">
+      <span class="ledger-card__verdict" :class="verdictClass ? `is-${verdictClass}` : undefined">
         {{ fm.verdict ?? '未评' }}
       </span>
       <span v-if="fm.price" class="ledger-card__price">¥{{ fm.price }}</span>

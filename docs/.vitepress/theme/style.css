@@ -60,6 +60,7 @@
   align-items: baseline;
   gap: 0.75rem;
   margin-bottom: 0.9rem;
+  flex-wrap: wrap;
 }
 
 .ledger-card__verdict {
@@ -71,6 +72,7 @@
   line-height: 1.6;
   color: var(--vp-c-text-2);
   background: transparent;
+  overflow-wrap: anywhere;
 }
 
 .ledger-card__verdict.is-good {
