@@ -16,6 +16,9 @@
 - 站点 root = `docs/`，构建产物 = 仓库根 `dist/`。`docs/.vitepress/dist` 与 `docs/.vitepress/cache` 均不入库。
 - `base: '/garbage-man/'`，`appearance: 'force-dark'` —— 站点锁定深色，不提供明暗切换。
 - **禁止任何外链字体**。仅用系统字体栈，`--vp-font-family-mono` 用于价格、参数、命令行。
+  另：VitePress 默认主题会自带并 preload Inter（16 个 woff2 / 652K）。必须用
+  `vitepress/theme-without-fonts` 替代 `vitepress/theme` —— 它不 import `styles/fonts.css`，
+  字体文件与 preload 标签就都不会进产物（实测产物从 ~950K 降到 296K）。
 - 侧边栏唯一数据源是 `docs/` 目录树；不提交任何生成文件，不维护手写菜单。
 - `gray-matter` 必须真实安装在 `devDependencies` —— VitePress 的 config 打包器不内联 node_modules 依赖，缺失时构建报 `ERR_MODULE_NOT_FOUND`。
 - 内容 frontmatter 字段命名严格按 spec 第 4 节：`title` / `description` / `date` / `order` / `sidebar_label` / `cloud` / `tags`；账本额外字段 `acquired` / `price` / `condition` / `source` / `specs` / `verdict` / `step`。
@@ -688,10 +691,10 @@ git commit -m "feat: generate sidebar from content directory tree"
 
 - [ ] **Step 2: 在 theme 入口引入样式**
 
-改 `docs/.vitepress/theme/index.ts`：
+改 `docs/.vitepress/theme/index.ts`。**注意 import 的来源是 `vitepress/theme-without-fonts`，不是 `vitepress/theme`** —— 后者会连带引入 Inter 字体文件与 preload 标签：
 
 ```ts
-import DefaultTheme from 'vitepress/theme'
+import DefaultTheme from 'vitepress/theme-without-fonts'
 import type { Theme } from 'vitepress'
 import './style.css'
 
@@ -710,6 +713,12 @@ Expected: 输出 `#00e27a`（自定义主色已进入编译后的 CSS）。
 
 Run: `grep -c 'Googleapis\|fonts.googleapis' dist/assets/style.*.css`
 Expected: 输出 `0` —— 确认没有引入任何外链字体。
+
+Run: `ls dist/assets/*.woff2 2>/dev/null | wc -l`
+Expected: 输出 `0` —— 一个字体文件都不该进产物。
+
+Run: `grep -o 'rel="preload"' dist/index.html | wc -l`
+Expected: 输出 `0` —— 不应有字体 preload。
 
 - [ ] **Step 4: 提交**
 
