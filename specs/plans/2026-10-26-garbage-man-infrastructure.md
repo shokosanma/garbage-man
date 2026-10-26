@@ -1594,12 +1594,40 @@ git commit -m "ci: deploy site to github pages on push"
 
 - [ ] **Step 5: 首次部署需要作者手动操作**
 
-在 GitHub 仓库页面：`Settings` → `Pages` → `Build and deployment` → `Source` 选 **GitHub Actions**。
+> **实测更正（控制器在 Task 8 实现后核对过）**：原写「token 已失效，跑 `gh auth refresh -h github.com`」
+> —— **这是错的**。实测：token **有效**（`gh api user` 返回 `shokosanma`），但 **scopes 里没有 `workflow`**：
+> `admin:public_key, gist, read:org, repo`。而 `workflow` 恰恰是推 `.github/workflows/` 下文件所必需的
+> （缺了会 403 "refusing to allow this token to update workflow files"）。
+> 裸跑 `gh auth refresh` **默认保留原有 scopes、不会补上 `workflow`**，所以原来那条命令解决不了问题。
+> 另有两条原先没写的前提：**本地没有配 git remote**，**GitHub 上还没有这个仓库**。下面是实测后的正确顺序。
 
-作者还需要重新授权 gh CLI（token 已失效）：
+1. **建仓库**（GitHub 上目前没有 `shokosanma/garbage-man`）：
 
-Run: `gh auth refresh -h github.com`
-Expected: 交互式授权成功；随后 `gh auth status` 显示已登录。
+   ```bash
+   gh repo create shokosanma/garbage-man --public --description "从云账单和废品堆里，捡回被丢掉的钱"
+   ```
+
+   仓库名必须是 `garbage-man` —— 站点的 `base: '/garbage-man/'` 依赖它，名字对不上 Pages 路径就是错的。
+
+2. **补 `workflow` scope**（当前 token 缺，推工作流文件会被拒）：
+
+   ```bash
+   gh auth refresh -h github.com -s workflow
+   ```
+
+   Expected: 交互式授权成功；随后 `gh auth status` 的 scopes 里能看到 `workflow`。
+
+3. **配远端**（本地目前一个 remote 都没有）：
+
+   ```bash
+   git remote add origin git@github.com:shokosanma/garbage-man.git
+   ```
+
+4. **推 `main`**：工作流只在 push 到 `main` 时触发，只推特性分支不会部署；`workflow_dispatch` 可手动兜底。
+
+5. **仓库页面开 Pages**：`Settings` → `Pages` → `Build and deployment` → `Source` 选 **GitHub Actions**。
+   （`actions/configure-pages@v5` 的 `enablement` 默认 `true`、有可能自动启用 Pages；
+   手动设一次是幂等的，不会坏事 —— 但别把它当成唯一可能的开关。）
 
 ---
 
