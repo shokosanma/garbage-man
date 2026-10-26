@@ -23,6 +23,8 @@
 - 硬件文章不得出现具体品牌未公开的内部数据；价格以「行情区间」表述并标注时间点。
 - 云文章正文首行加 `<StepBadge />`（`step` 字段驱动），硬件文章不加。
 - 内部链接一律用站点绝对路径（`/cloud/visibility/xxx`），不写相对路径。
+- frontmatter 里的日期**一律加引号**（`date: "2026-10-26"`）—— YAML 会把不带引号的
+  `2026-10-26` 隐式解析成 **Date 对象**，渲染时会变成 `Sun Mar 15 2026 00:00:00 GMT+0000`。
 - 每完成一篇跑一次 `npm run build && npm run test:build`，链接测试保持绿。
 
 ---
@@ -144,7 +146,7 @@ git commit -m "test: add internal link reachability check"
 ---
 title: 四步法总纲
 description: 云账单降本的通用框架：看见、识别、处置、防复发
-date: 2026-10-26
+date: "2026-10-26"
 tags: [方法论, 成本治理]
 ---
 
@@ -270,7 +272,7 @@ frontmatter：
 ---
 title: 阿里云用标签做成本分摊
 description: 把 ECS、OSS、RDS 的开销拆到团队和项目头上
-date: 2026-10-26
+date: "2026-10-26"
 cloud: 阿里云
 step: visibility
 tags: [标签, 成本分摊, 账单]
@@ -392,7 +394,7 @@ frontmatter：
 ---
 title: 识别空跑的计算资源
 description: 用监控指标把长期低利用率的实例挑出来
-date: 2026-10-26
+date: "2026-10-26"
 step: identify
 tags: [闲置资源, 监控, 降本]
 ---
@@ -975,7 +977,7 @@ git commit -m "docs: add second-hand hardware guide articles"
 ---
 title: ThinkPad T14 Gen 2
 description: 待填：一句话概括这台机器的定位
-date: 2026-10-26
+date: "2026-10-26"
 acquired: 待填
 price: 待填
 condition: 待填

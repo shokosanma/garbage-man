@@ -762,6 +762,14 @@ const verdictClass = computed(() => VERDICT_CLASS[fm.verdict] ?? 'none')
 const specEntries = computed<[string, string][]>(() =>
   Object.entries((fm.specs ?? {}) as Record<string, string>),
 )
+
+// YAML 会把 `2026-03-15` 隐式解析成 Date 对象，直接插值会渲染成
+// "Sun Mar 15 2026 00:00:00 GMT+0000"。frontmatter 里加引号能避开，
+// 这里再兜一层，作者忘了加引号也不会渲染出乱码。
+function asText(value: unknown): string {
+  if (value instanceof Date) return value.toISOString().slice(0, 10)
+  return value == null ? '' : String(value)
+}
 </script>
 
 <template>
@@ -776,7 +784,7 @@ const specEntries = computed<[string, string][]>(() =>
     <dl class="ledger-card__facts">
       <div v-if="fm.acquired">
         <dt>入手</dt>
-        <dd>{{ fm.acquired }}</dd>
+        <dd>{{ asText(fm.acquired) }}</dd>
       </div>
       <div v-if="fm.condition">
         <dt>成色</dt>
@@ -799,6 +807,12 @@ const specEntries = computed<[string, string][]>(() =>
   </div>
 </template>
 ```
+
+**注意（YAML 隐式类型陷阱）**：`date: 2026-03-15` 这类不带引号的日期，会被 gray-matter 的 YAML 引擎
+（js-yaml `safeLoad`，DEFAULT_SCHEMA）解析成 **Date 对象**，不是字符串。
+所以 frontmatter 里的日期一律**加引号**（`date: "2026-03-15"`），
+组件里对 `acquired` 再用 `asText()` 兜一层 —— 防止作者漏加引号时把
+`Sun Mar 15 2026 00:00:00 GMT+0000` 这种东西渲染到页面上。
 
 - [ ] **Step 2: 注册组件**
 
@@ -826,8 +840,8 @@ export default {
 ---
 title: ThinkPad X1 Carbon Gen 9
 description: 二手轻薄本价格锚点的观察样本
-date: 2026-10-26
-acquired: 2026-03-15
+date: "2026-10-26"
+acquired: "2026-03-15"
 price: 3200
 condition: 95新
 source: 闲鱼
@@ -996,7 +1010,7 @@ order: 1
 ---
 title: 四步法总纲
 description: 云账单降本的通用框架
-date: 2026-10-26
+date: "2026-10-26"
 tags: [方法论]
 order: 1
 ---
@@ -1326,7 +1340,7 @@ tests/                   单元测试与产物断言
 ---
 title: 阿里云账单标签成本分摊实战
 description: 用标签把 ECS/OSS/RDS 的开销拆到团队和人
-date: 2026-10-26
+date: "2026-10-26"
 cloud: 阿里云
 tags: [成本分摊, 标签]
 order: 1
@@ -1341,8 +1355,8 @@ order: 1
 ---
 title: ThinkPad X1 Carbon Gen 9
 description: 3200 元入手的 95 新轻薄本
-date: 2026-10-26
-acquired: 2026-03-15
+date: "2026-10-26"
+acquired: "2026-03-15"
 price: 3200
 condition: 95新
 source: 闲鱼
