@@ -34,6 +34,8 @@
     `<StepBadge />` → 空行 → `# <title>`
   - 带 `<LedgerCard />` 的页：卡片是块级元素，放在标题**下方**——
     `# <title>` → 空行 → `<LedgerCard />`
+  - `layout: home` 的**首页例外**：VitePress 的 `VPHomeHero` 渲染的 hero `name` **本身就是 `<h1>`**
+    （`<h1 class="name">`），所以首页正文**不需要**再写 H1。
 
 ---
 
@@ -1462,7 +1464,8 @@ features:
 - [ ] **Step 2: 构建并验证**
 
 Run: `npm run build && npm run test:build`
-Expected: `pass 4 / fail 0`。
+Expected: `pass 5 / fail 0`（首页已生成 / 资源链接带 base 前缀 / 账本卡片渲染 frontmatter 字段 /
+价签的修饰符不越出契约 / 产物里没有任何字体）。
 
 Run: `grep -o '捡回被丢掉的钱' dist/index.html | head -1`
 Expected: 输出一次。

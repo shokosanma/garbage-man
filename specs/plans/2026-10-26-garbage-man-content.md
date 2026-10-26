@@ -35,6 +35,8 @@
     `<StepBadge />` → 空行 → `# <title>`
   - 带 `<LedgerCard />` 的页：卡片是块级元素，放在标题**下方**——
     `# <title>` → 空行 → `<LedgerCard />`
+  - `layout: home` 的**首页例外**：VitePress 的 `VPHomeHero` 渲染的 hero `name` **本身就是 `<h1>`**
+    （`<h1 class="name">`），所以首页正文**不需要**再写 H1。
 
 ---
 
