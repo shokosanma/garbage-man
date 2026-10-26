@@ -2,7 +2,8 @@ import { defineConfig } from 'vitepress'
 import path from 'node:path'
 import { buildSidebar } from './sidebar.ts'
 
-const CONTENT_ROOT = path.resolve(process.cwd(), 'docs')
+// 以配置文件自身位置推导内容根，与调用方的 cwd 无关。
+const CONTENT_ROOT = path.resolve(import.meta.dirname, '..')
 
 export default defineConfig({
   srcDir: '.',
