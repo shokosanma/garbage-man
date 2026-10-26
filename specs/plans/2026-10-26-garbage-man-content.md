@@ -840,7 +840,7 @@ git commit -m "docs: add prevention mechanism articles"
 
 ## 渠道二：企业与机构的批量处置
 
-## 渠道三：网吧与网吧的退役机
+## 渠道三：网吧与网咖的退役机
 
 ## 渠道四：电子废弃物回收站
 
