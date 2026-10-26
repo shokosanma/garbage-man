@@ -121,26 +121,44 @@
   color: var(--vp-c-text-1);
 }
 
-.ledger-card__specs {
+/* 价签卡在正文里，VitePress 的 .vp-doc table 系列规则会漏进来
+   （块级窄表、斑马纹、四边框线、表头色块、14px 字号）。
+   这里统一加上 .ledger-card 前缀把特异性抬到 (0,2,x)，逐项复位。 */
+.ledger-card .ledger-card__specs {
+  display: table;
   width: 100%;
+  margin: 0;
+  overflow: visible;
   border-collapse: collapse;
   font-size: 0.88rem;
 }
 
-.ledger-card__specs th,
-.ledger-card__specs td {
+.ledger-card .ledger-card__specs tr {
+  background-color: transparent;
+  border-top: none;
+}
+
+.ledger-card .ledger-card__specs tr:nth-child(2n) {
+  background-color: transparent;
+}
+
+.ledger-card .ledger-card__specs th,
+.ledger-card .ledger-card__specs td {
   padding: 0.35rem 0.6rem;
+  border: none;
   border-top: 1px solid var(--vp-c-divider);
+  background-color: transparent;
+  font-size: inherit;
   text-align: left;
 }
 
-.ledger-card__specs th {
+.ledger-card .ledger-card__specs th {
   width: 5.5rem;
   font-weight: 400;
   color: var(--vp-c-text-3);
 }
 
-.ledger-card__specs td {
+.ledger-card .ledger-card__specs td {
   font-family: var(--vp-font-family-mono);
   color: var(--vp-c-text-1);
 }
@@ -157,6 +175,21 @@
   color: var(--vp-c-brand-1);
   font-size: 0.82rem;
   font-weight: 600;
+}
+
+/* ---------- 导航栏 ---------- */
+
+/* 导航栏底下的分隔线取的是 --vp-c-gutter，而我们把 gutter 调成了页面底色
+   （页脚那条线需要藏起来），结果连导航栏的分隔线一起没了。
+   在导航栏内部把 gutter 换回边框色；首页不需要这条线，所以排除 .home。 */
+.VPNavBar:not(.home) {
+  --vp-c-gutter: var(--vp-c-border);
+}
+
+/* 兜底：VitePress 的分隔线规则带 scope 属性，特异性是 (0,4,0)，
+   这条 (0,5,0) 直接压过它，分隔线颜色不依赖 token 改写。 */
+.VPNavBar:not(.home) .divider > div.divider-line {
+  background-color: var(--vp-c-border);
 }
 
 /* ---------- 首页 ---------- */
