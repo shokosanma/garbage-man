@@ -98,8 +98,10 @@ Expected: 同上。
 
 - [ ] **Step 5: 验证工具链可用**
 
-Run: `npx vitepress --version && node -e "import('gray-matter').then(m=>console.log('gray-matter ok', typeof m.default))"`
-Expected: 输出 vitepress 版本号，以及 `gray-matter ok function`。
+Run: `node -p "require('vitepress/package.json').version" && node -e "import('gray-matter').then(m=>console.log('gray-matter ok', typeof m.default))"`
+Expected: 输出 `1.6.4`，以及 `gray-matter ok function`。
+
+> 不要用 `npx vitepress --version` —— VitePress 1.6.4 的 CLI 没有 `--version` 分支（`node_modules/vitepress/dist/node/cli.js:406` 打印 banner 后直接进 dev server 分支），命令会挂住并在仓库根留下 `.vitepress/cache`。
 
 - [ ] **Step 6: 提交**
 
