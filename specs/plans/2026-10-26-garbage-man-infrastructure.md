@@ -711,13 +711,16 @@ Expected: 退出码 0。
 Run: `grep -o '#00e27a' dist/assets/style.*.css | head -1`
 Expected: 输出 `#00e27a`（自定义主色已进入编译后的 CSS）。
 
-Run: `grep -c 'Googleapis\|fonts.googleapis' dist/assets/style.*.css`
+Run: `grep -rc 'Googleapis\|fonts.googleapis' dist/assets/style.*.css`
 Expected: 输出 `0` —— 确认没有引入任何外链字体。
 
-Run: `ls dist/assets/*.woff2 2>/dev/null | wc -l`
-Expected: 输出 `0` —— 一个字体文件都不该进产物。
+Run: `find dist -name '*.woff2' -o -name '*.woff' -o -name '*.ttf' -o -name '*.otf' -o -name '*.eot' | wc -l`
+Expected: 输出 `0` —— 一个字体文件都不该进产物（扫全树，不只 `dist/assets`）。
 
-Run: `grep -o 'rel="preload"' dist/index.html | wc -l`
+Run: `grep -c '@font-face' dist/assets/style.*.css`
+Expected: 输出 `0` —— 不应残留任何 @font-face 规则（原计划的 `rel="preload"` 计数检不出这个）。
+
+Run: `grep -o 'rel="preload"[^>]*font' dist/index.html | wc -l`
 Expected: 输出 `0` —— 不应有字体 preload。
 
 - [ ] **Step 4: 提交**
