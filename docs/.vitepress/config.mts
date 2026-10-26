@@ -1,4 +1,8 @@
 import { defineConfig } from 'vitepress'
+import path from 'node:path'
+import { buildSidebar } from './sidebar.ts'
+
+const CONTENT_ROOT = path.resolve(process.cwd(), 'docs')
 
 export default defineConfig({
   srcDir: '.',
@@ -13,6 +17,6 @@ export default defineConfig({
       { text: '云账单', link: '/cloud/' },
       { text: '二手硬件', link: '/hardware/' },
     ],
-    sidebar: [],
+    sidebar: buildSidebar(CONTENT_ROOT),
   },
 })
