@@ -1790,7 +1790,7 @@ specs:
 
 <LedgerCard />
 
-![整机外观](/images/hardware/thinkpad-x1.jpg)
+![整机外观](/images/hardware/xxx.jpg)
 
 ## 到手实测
 ## 翻车点
