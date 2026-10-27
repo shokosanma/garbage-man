@@ -24,7 +24,11 @@
 - 云文章正文首行加 `<StepBadge />`（`step` 字段驱动），硬件文章不加。
 - 内部链接一律用站点绝对路径（`/cloud/visibility/xxx`），不写相对路径。
 - frontmatter 里的日期**一律加引号**（`date: "2026-10-26"`）—— YAML 会把不带引号的
-  `2026-10-26` 隐式解析成 **Date 对象**，渲染时会变成 `Sun Mar 15 2026 00:00:00 GMT+0000`。
+  `2026-10-26` 隐式解析成 **Date 对象**，VitePress 注入页面数据时做了一次
+  `JSON.parse(JSON.stringify())`，Date 到客户端前已经变成 ISO 串。
+  账本页的「入手」现在靠 `LedgerCard` 里的 `asText()` 兜底，显示出来仍是 `2026-03-15`；
+  但那只是组件级的兜底 —— 任何直接插值的地方都会渲染成 `2026-03-15T00:00:00.000Z`。
+  加引号是唯一可靠的写法。
 - 每完成一篇跑一次 `npm run build && npm run test:build`，链接测试保持绿。
 - **每个内容页面正文必须有一个可见的 H1。** VitePress 1.6.4 的默认主题**不会**把 frontmatter 的
   `title` 渲染成 H1 —— frontmatter 的 title 只用于浏览器标题、侧边栏文字和文档大纲。
