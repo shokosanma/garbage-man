@@ -1633,8 +1633,19 @@ git commit -m "ci: deploy site to github pages on push"
 4. **推 `main`**：工作流只在 push 到 `main` 时触发，只推特性分支不会部署；`workflow_dispatch` 可手动兜底。
 
 5. **仓库页面开 Pages**：`Settings` → `Pages` → `Build and deployment` → `Source` 选 **GitHub Actions**。
-   （`actions/configure-pages@v5` 的 `enablement` 默认 `true`、有可能自动启用 Pages；
-   手动设一次是幂等的，不会坏事 —— 但别把它当成唯一可能的开关。）
+   **Pages 站点必须先存在**，否则 `actions/configure-pages@v5` 的 "Setup Pages" 步骤会以 404 失败
+   （`Get Pages site failed… consider exploring the enablement parameter`）—— 报错文案里的
+   `enablement` 指的是「用这个参数去开 Pages」，不是「默认已经开了」。
+   **不要在工作流里加 `enablement: true`**：它的默认值是 `false`，而且官方 action.yml 明确要求
+   「a token other than `GITHUB_TOKEN`」（PAT 需 `repo` scope），工作流里的 `github.token` 没有那个权限，
+   加了只会把「站点不存在」换成「权限不足」。
+   纯命令行开站（无需 PAT，现有 token 的 `repo` scope 够用）：
+
+   ```bash
+   gh api --method POST repos/shokosanma/garbage-man/pages -f build_type=workflow
+   ```
+
+   幂等：站点已存在时再跑会报 422，但站点已经是开着的，不影响部署。
 
 ---
 
