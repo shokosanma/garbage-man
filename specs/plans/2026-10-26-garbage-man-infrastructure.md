@@ -1503,6 +1503,24 @@ git commit -m "feat: build home page with hero and feature cards"
 > `contents: read` 只够 checkout —— 我们不需要 `contents: write`（工作流不往仓库里提交东西）。
 > `cancel-in-progress: false` 与 GitHub 官方 starter 工作流一致：让正在进行的部署跑完，
 > 新的 push 排队而不是把它掐掉。
+>
+> **权限按 job 分开（不是工作流级）**：build job 会跑第三方 npm 代码（`npm ci`、`npm run build`），
+> 所以它**不该**继承 `id-token: write`（能签发 OIDC token）—— 一旦依赖被投毒，
+> 就能在构建阶段冒充本工作流。build job 只要 `contents: read`（checkout / npm ci / 构建）
+> 加 `pages: read`（`configure-pages` 只调 `GET /repos/{owner}/{repo}/pages`；
+> 只有开 `enablement: true` 时才会调 `POST`，而我们不开）。deploy job 要 `pages: write`
+> + `id-token: write`。两个 job 都显式声明 ⇒ 顶层不再写 `permissions:`。
+>
+> **action 版本必须是 Node 24 大版本**：GitHub 已把 Node 20 从 Actions runner 移除
+> （2026-09-23 公告），声明 `runs.using: node20` 的 action 只因被「强制跑在 Node 24」才没炸，
+> 每次 run 都会打 Node.js 20 弃用警告 —— 那是**未承诺的兜底**，不是受支持的配置。
+> 升版对本站是行为中性的：`checkout` v7 的破坏性变更只针对 `pull_request_target` /
+> `workflow_run`（本工作流只有 `push` 到 `main` + `workflow_dispatch`）；
+> `setup-node` v5+ 的自动缓存需要 `package.json` 有 `packageManager` 字段（本站没有）；
+> `configure-pages` v6 / `deploy-pages` v5 只是把运行时换成 Node 24，输出不变。
+> `upload-pages-artifact` v5 把内层 `actions/upload-artifact` 换成 v7 —— CI 警告里
+> 出现的是**内层**的 `actions/upload-artifact@v4`，不是 `upload-pages-artifact` 本身。
+> v4 起上传产物会**丢掉隐藏文件**，所以显式写 `include-hidden-files: true` 保持产物内容不变。
 
 ```yaml
 name: Deploy to GitHub Pages
@@ -1512,11 +1530,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -1524,12 +1537,15 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -1546,37 +1562,54 @@ jobs:
       - name: Build output tests
         run: npm run test:build
 
+      # Pages 站点必须先存在，否则这一步会以 404 "Get Pages site failed" 失败。
+      # 开通方式：网页 Settings → Pages，或 gh api --method POST
+      # repos/OWNER/REPO/pages -f build_type=workflow。不要在这里加 enablement: true ——
+      # 它默认是 false，且需要 GITHUB_TOKEN 之外的 token（PAT，repo scope）才有权限。
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dist
+          include-hidden-files: true
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 ```
 
-- [ ] **Step 2: 校验 YAML 语法**
+- [ ] **Step 2: 校验 YAML 语法与权限结构**
 
-Run: `python3 -c "import yaml,sys; d=yaml.safe_load(open('.github/workflows/deploy.yml')); print('jobs:', list(d['jobs'].keys()))"`
-Expected: 输出 `jobs: ['build', 'deploy']`。
+Run: `python3 -c "import yaml,sys; d=yaml.safe_load(open('.github/workflows/deploy.yml')); print('jobs:', list(d['jobs'].keys())); print('build:', d['jobs']['build']['permissions']); print('deploy:', d['jobs']['deploy']['permissions'])"`
+Expected: 输出 `jobs: ['build', 'deploy']`、`build: {'contents': 'read', 'pages': 'read'}`、
+`deploy: {'pages': 'write', 'id-token': 'write'}`。
+
+Run: `grep -nE "uses: actions/" .github/workflows/deploy.yml`
+Expected: 五个 action **全部**是 Node 24 大版本 —— `checkout@v7` / `setup-node@v7` /
+`configure-pages@v6` / `upload-pages-artifact@v5` / `deploy-pages@v5`。
 
 > **PyYAML 的 `on:` 陷阱（别"修"它）**：用 `python3 -c "import yaml; ..."` 校验时，
 > PyYAML 6.x 走 YAML 1.1 规范，会把顶层键 `on:` 解析成布尔 **`True`**
-> （所以 `print(list(d.keys()))` 看到的是 `['name', True, 'permissions', 'concurrency', 'jobs']`）。
+> （所以 `print(list(d.keys()))` 看到的是 `['name', True, 'concurrency', 'jobs']`）。
 > 这是 **PyYAML 的老毛病，不是工作流写错了** —— GitHub Actions 自己的解析器把 `on` 当普通字符串键，
 > 官方 starter 工作流就是这么写的。**不要**把它改成 `"on":` 或加引号。
 > 校验只看 `jobs` 键即可（Step 2 的命令正是如此）。
+>
+> **顶层没有 `permissions:` 了**：权限改成按 job 声明（build = `contents: read` + `pages: read`，
+> deploy = `pages: write` + `id-token: write`），所以 `d['permissions']` 会 KeyError ——
+> 这是**预期的**，不要为了"修好"它而在顶层加回 `permissions:`。
 
 - [ ] **Step 3: 确认产物目录与工作流一致**
 
