@@ -1609,13 +1609,20 @@ git commit -m "ci: deploy site to github pages on push"
 
    仓库名必须是 `garbage-man` —— 站点的 `base: '/garbage-man/'` 依赖它，名字对不上 Pages 路径就是错的。
 
-2. **补 `workflow` scope**（当前 token 缺，推工作流文件会被拒）：
+2. **补 `workflow` scope —— 走 SSH 推送时可以跳过，走 API 合并时才必需**：
+
+   本机已配好 GitHub SSH key（`ssh -T git@github.com` → `Hi shokosanma!`），
+   而 GitHub 的 OAuth scope 检查**只作用于 API 和基于 token 的 git 操作**，
+   「人通过 SSH 推送」不受 scope 限制 —— 所以第 4 步走 SSH 推 `.github/workflows/` **不会**被 403 拒。
+   只有走 `gh pr create` + `gh pr merge`（API 合并）时才必须有 `workflow` scope：
 
    ```bash
    gh auth refresh -h github.com -s workflow
    ```
 
    Expected: 交互式授权成功；随后 `gh auth status` 的 scopes 里能看到 `workflow`。
+   远程（不在机器旁）也能做：`gh auth refresh` 走 **OAuth 设备码流程**，
+   命令会打印一次性验证码 + URL，在手机上打开 URL、输码、授权即可，命令随即在本机完成。
 
 3. **配远端**（本地目前一个 remote 都没有）：
 
