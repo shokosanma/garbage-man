@@ -1717,12 +1717,15 @@ npm test           # 单元测试 + 构建 + 产物断言
 
 ### 环境提示
 
-本机 `HTTP_PROXY` 指向的主机已下线，项目内 `.npmrc` 已写 `noproxy=*` 绕过。
+本机 `HTTP_PROXY` 指向的代理端口已下线，项目内 `.npmrc` 已写 `noproxy=*` 绕过。
 若 `npm install` 仍然挂起，改用：
 
 ```bash
 env -u HTTP_PROXY -u HTTPS_PROXY npm install
 ```
+
+`.npmrc` 里的 `noproxy=*` 只为绕开这台机器上的失效代理；
+你若在需要代理的网络里装依赖，删掉这一行或改成自己的代理地址。
 
 ## 目录结构
 
@@ -1757,6 +1760,8 @@ tags: [成本分摊, 标签]
 order: 1
 ---
 
+# 阿里云账单标签成本分摊实战
+
 正文。
 ```
 
@@ -1789,7 +1794,7 @@ specs:
 ### 云文章的步骤徽章
 
 在 frontmatter 里写 `step: visibility` / `identify` / `dispose` / `prevent`，
-正文首行加 `<StepBadge />`，页面顶部会出现对应步骤的荧光徽章。
+正文按 `<StepBadge />` → 空行 → `# <title>` 的顺序开头，页面顶部会出现对应步骤的荧光徽章。
 
 ## frontmatter 里的日期要加引号
 
@@ -1804,11 +1809,15 @@ specs:
 
 - 每个内容目录需要一个 `index.md`，它决定该分组在侧边栏的标题与排序，
   缺 `index.md` 的目录不会出现在导航里。
+- 分组标题取 `index.md` 的 `sidebar_label`，没写就退回 `title`，再没有就用目录名。
 - 排序用 frontmatter 的 `order` 字段（数字小的在前）；相同 order 时文件排在目录前。
 - 目录 URL 不带数字前缀，用语义命名（`cloud/visibility/` 而非 `cloud/10-visibility/`）。
 
 ## 写作规范
 
+- **每个页面的正文首行是 `# <title>`** —— VitePress 不会把 frontmatter 的 `title` 渲染成标题，
+  不写就一个标题都看不见。带 `<StepBadge />` 的页把徽章放在标题**上方**，
+  带 `<LedgerCard />` 的页把卡片放在标题**下方**。
 - **文章骨架**：引子 / 背景 → 问题 → 方案 → 可复现的命令与数据 → 踩过的坑 → 结论。
 - **账本骨架**：图片 → 关键参数表 → 入手价 / 渠道 / 时间 → 到手实测 → 翻车点 → 值不值。
 - 命令可直接复制执行，标注运行平台与权限要求。
@@ -1818,7 +1827,9 @@ specs:
 ## 部署
 
 推 `main` 分支触发 GitHub Actions 自动构建发布到 GitHub Pages。
-首次部署前需在仓库 `Settings` → `Pages` → `Source` 选择 **GitHub Actions**。
+Pages 站点必须**先存在**：仓库 `Settings` → `Pages` → `Source` 选 **GitHub Actions**，
+或用命令行 `gh api --method POST repos/OWNER/REPO/pages -f build_type=workflow`。
+站点不存在时，工作流的 "Setup Pages" 步骤会以 404 `Get Pages site failed` 失败。
 ````
 
 - [ ] **Step 2: 验证 README 中的命令与实际一致**
@@ -1840,9 +1851,9 @@ git commit -m "docs: add readme with authoring guidelines"
 全部任务完成后，以下命令必须全绿：
 
 ```bash
-npm run test:unit   # 12 个单元测试通过
+npm run test:unit   # 22 个单元测试通过
 npm run build       # 构建成功，产物在 dist/
-npm run test:build  # 4 个产物断言通过
+npm run test:build  # 5 个产物断言通过
 ```
 
 且 `git status` 干净，`dist/`、`node_modules/` 未被提交。
